@@ -26,66 +26,39 @@ module "vpc" {
   tags               = var.tags
 }
 
-# 
-
-# Certificate
-
-resource "aws_acm_certificate" "cert" {
-
-  domain_name       = "test.ridvanozaydin.com"
-  validation_method = "DNS"
-
-  tags = var.tags
-
-  validation_option {
-    domain_name       = "test.ridvanozaydin.com"
-    validation_domain = "ridvanozaydin.com"
-  }
-
-  # to replace a certificate which is currently in use 
-  lifecycle {
-    create_before_destroy = true
-  }
+resource "aws_acm_certificate" "client_vpn_server_cert" {
+  private_key      = file("./easyrsa/keys/server.key")
+  certificate_body = file("./easyrsa/keys/server.crt")
 }
 
-data "aws_route53_zone" "ridvanozaydincom" {
-  name         = "ridvanozaydin.com"
-  private_zone = false
-}
-
-resource "aws_route53_record" "testridvanozaydincom" {
-  for_each = {
-    for dvo in aws_acm_certificate.cert.domain_validation_options : dvo.domain_name => {
-      name   = dvo.resource_record_name
-      record = dvo.resource_record_value
-      type   = dvo.resource_record_type
-    }
-  }
-
-  allow_overwrite = true
-  name            = each.value.name
-  records         = [each.value.record]
-  ttl             = 60
-  type            = each.value.type
-  zone_id         = data.aws_route53_zone.ridvanozaydincom.zone_id
-}
-
-
-resource "aws_acm_certificate_validation" "testridvanozaydincom" {
-  certificate_arn         = aws_acm_certificate.cert.arn
-  validation_record_fqdns = [for record in aws_route53_record.testridvanozaydincom : record.fqdn]
+resource "aws_acm_certificate" "client_vpn_client1_cert" {
+  private_key      = file("./easyrsa/keys/client1.domain.tld.key")
+  certificate_body = file("./easyrsa/keys/client1.domain.tld.crt")
 }
 
 # Client VPN
 
-# resource "aws_ec2_client_vpn_endpoint" "example" {
-#   description            = "clientvpn-example"
-#   server_certificate_arn = aws_acm_certificate.cert.arn
-#   client_cidr_block      = "172.0.0.0/16"
+resource "aws_ec2_client_vpn_endpoint" "client_vpn" {
+  description            = "client_vpn"
+  server_certificate_arn = aws_acm_certificate.client_vpn_server_cert.arn
+  client_cidr_block      = "172.0.0.0/16"
 
-#   authentication_options {
-#     type                       = "certificate-authentication"
-#     root_certificate_chain_arn = aws_acm_certificate.cert.arn
-#   }
-  
-# }
+  authentication_options {
+    type                       = "certificate-authentication"
+    root_certificate_chain_arn = aws_acm_certificate.client_vpn_server_cert.arn
+  }
+
+  connection_log_options {
+    enabled = false
+    #   cloudwatch_log_group  = aws_cloudwatch_log_group.lg.name
+    #   cloudwatch_log_stream = aws_cloudwatch_log_stream.ls.name
+  }
+
+}
+
+resource "aws_ec2_client_vpn_network_association" "vpn_zone" {
+  for_each               = { for k, instance in module.vpc.private_subnets[*] : k => instance }
+  client_vpn_endpoint_id = aws_ec2_client_vpn_endpoint.client_vpn.id
+  subnet_id              = each.value
+}
+
