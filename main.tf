@@ -28,7 +28,7 @@ module "vpc" {
 
 # security groups
 resource "aws_security_group" "client_vpn_sg" {
-  name        = "client-vpm-sg"
+  name        = "client-vpn-sg"
   description = "Allow HTTP and SSH traffic via Terraform"
 
   ingress {
@@ -45,6 +45,27 @@ resource "aws_security_group" "client_vpn_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "udp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port   = 1194
+    to_port     = 1194
+    protocol    = "udp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
   egress {
     from_port   = 0
     to_port     = 0
@@ -56,25 +77,33 @@ resource "aws_security_group" "client_vpn_sg" {
 # certificates
 
 resource "aws_acm_certificate" "client_vpn_server_cert" {
-  private_key      = file("./easyrsa/keys/server.key")
-  certificate_body = file("./easyrsa/keys/server.crt")
+  private_key       = file("./easyrsa/keys/server.key")
+  certificate_body  = file("./easyrsa/keys/server.crt")
+  certificate_chain = file("./easyrsa/keys/ca.crt")
 }
 
-resource "aws_acm_certificate" "client_vpn_client1_cert" {
-  private_key      = file("./easyrsa/keys/client1.domain.tld.key")
-  certificate_body = file("./easyrsa/keys/client1.domain.tld.crt")
-}
+# resource "aws_acm_certificate" "client_vpn_client1_cert" {
+#   private_key       = file("./easyrsa/keys/client1.domain.tld.key")
+#   certificate_body  = file("./easyrsa/keys/client1.domain.tld.crt")
+#   certificate_chain = file("./easyrsa/keys/server.crt")
+# }
 
-resource "aws_acm_certificate" "client_vpn_client2_cert" {
-  private_key      = file("./easyrsa/keys/client2.domain.tld.key")
-  certificate_body = file("./easyrsa/keys/client2.domain.tld.crt")
-}
+# resource "aws_acm_certificate" "client_vpn_client2_cert" {
+#   private_key       = file("./easyrsa/keys/client2.domain.tld.key")
+#   certificate_body  = file("./easyrsa/keys/client2.domain.tld.crt")
+#   certificate_chain = file("./easyrsa/keys/server.crt")
+# }
 
 # cloudwatch log group
 
 resource "aws_cloudwatch_log_group" "client_vpn_log_group" {
   name = "clientvpn"
   tags = var.tags
+}
+
+resource "aws_cloudwatch_log_stream" "client_vpn_log_stream" {
+  name           = "clientvpn"
+  log_group_name = aws_cloudwatch_log_group.client_vpn_log_group.name
 }
 
 # Client VPN
@@ -95,7 +124,7 @@ resource "aws_ec2_client_vpn_endpoint" "client_vpn" {
   connection_log_options {
     enabled               = true
     cloudwatch_log_group  = aws_cloudwatch_log_group.client_vpn_log_group.name
-    # cloudwatch_log_stream = 
+    cloudwatch_log_stream = aws_cloudwatch_log_stream.client_vpn_log_stream.name
   }
 
 }
@@ -105,5 +134,6 @@ resource "aws_ec2_client_vpn_network_association" "vpn_zone" {
   client_vpn_endpoint_id = aws_ec2_client_vpn_endpoint.client_vpn.id
   subnet_id              = each.value
   security_groups        = [aws_security_group.client_vpn_sg.id]
+
 }
 

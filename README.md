@@ -1,7 +1,9 @@
-# Sample VPN Setup
+# VPN Setup
 
+Separate keys for each user
 
-
+cert /Users/rozaydin/Projects/kobil/vpngw/easyrsa/keys/client2.domain.tld.crt
+key /Users/rozaydin/Projects/kobil/vpngw/easyrsa/keys/client2.domain.tld.key
 
 ## References
 
