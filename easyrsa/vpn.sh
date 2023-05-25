@@ -1,5 +1,6 @@
 #!/bin/bash
 
+docker build . -t easyrsa
 docker run --rm -it -v./keys:/vpn_keys --name easyrsa easyrsa
 
 # aws acm import-certificate --certificate fileb://keys/server.crt --private-key fileb://keys/server.key --certificate-chain fileb://keys/ca.crt --profile rozaydin --region eu-central-1

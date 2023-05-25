@@ -84,6 +84,6 @@ variable "tags" {
   default = {
     Terraform   = "true"
     Environment = "dev"
-    Project     = "apollo"
+    Project     = "kobil"
   }  
 }

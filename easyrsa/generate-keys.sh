@@ -5,6 +5,7 @@
 /easy-rsa/easyrsa3/easyrsa build-ca nopass
 /easy-rsa/easyrsa3/easyrsa build-server-full server nopass
 /easy-rsa/easyrsa3/easyrsa build-client-full client1.domain.tld nopass
+/easy-rsa/easyrsa3/easyrsa build-client-full client2.domain.tld nopass
 
 mkdir -p /vpn_keys
 cp /easy-rsa/easyrsa3/pki/ca.crt /vpn_keys
@@ -12,6 +13,8 @@ cp /easy-rsa/easyrsa3/pki/issued/server.crt /vpn_keys
 cp /easy-rsa/easyrsa3/pki/private/server.key /vpn_keys
 cp /easy-rsa/easyrsa3/pki/issued/client1.domain.tld.crt /vpn_keys
 cp /easy-rsa/easyrsa3/pki/private/client1.domain.tld.key /vpn_keys
+cp /easy-rsa/easyrsa3/pki/issued/client2.domain.tld.crt /vpn_keys
+cp /easy-rsa/easyrsa3/pki/private/client2.domain.tld.key /vpn_keys
 
 # docker build . -t easyrsa && docker run --rm -d --name easyrsa easyrsa
 
